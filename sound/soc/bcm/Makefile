@@ -42,6 +42,7 @@ snd-soc-fe-pi-audio-objs := fe-pi-audio.o
 snd-soc-rpi-simple-soundcard-objs := rpi-simple-soundcard.o
 snd-soc-rpi-wm8804-soundcard-objs := rpi-wm8804-soundcard.o
 snd-soc-pifi-40-objs := pifi-40.o
+snd-soc-pip-dac-objs := pip-dac.o
 
 obj-$(CONFIG_SND_BCM2708_SOC_GOOGLEVOICEHAT_SOUNDCARD)  += snd-soc-googlevoicehat-codec.o
 obj-$(CONFIG_SND_BCM2708_SOC_HIFIBERRY_DACPLUS) += snd-soc-hifiberry-dacplus.o
@@ -73,4 +74,5 @@ obj-$(CONFIG_SND_BCM2708_SOC_FE_PI_AUDIO) += snd-soc-fe-pi-audio.o
 obj-$(CONFIG_SND_RPI_SIMPLE_SOUNDCARD) += snd-soc-rpi-simple-soundcard.o
 obj-$(CONFIG_SND_RPI_WM8804_SOUNDCARD) += snd-soc-rpi-wm8804-soundcard.o
 obj-$(CONFIG_SND_BCM2708_SOC_PIFI_40) += snd-soc-pifi-40.o
+obj-$(CONFIG_SND_BCM2708_SOC_PIP_DAC) += snd-soc-pip-dac.o
 
