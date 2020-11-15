@@ -38,7 +38,7 @@ static const struct snd_soc_dapm_widget pip_dac_dapm_widgets[] = {
 
 /*
  * Map board connectors to codec widgets
- * NB - layout is { SINK, CONTROL, SOURCE }
+ * NB - format is { SINK, CONTROL, SOURCE }
  */
 static const struct snd_soc_dapm_route pip_dac_audio_map[] = {
 	/* Outputs */
@@ -162,16 +162,33 @@ static struct snd_soc_ops pip_dac_card_ops = {
 	.hw_params 	= pip_dac_card_hw_params,
 };
 
+static struct snd_soc_dai_link_component pip_dac_cpu = {
+	.dai_name = "bcm2708-i2s.0"
+};
+
+static struct snd_soc_dai_link_component pip_dac_codec = {
+	.name = "tlv320aic31xx-codec.1-0018",
+	.dai_name = "tlv320aic31xx-hifi"
+};
+
+static struct snd_soc_dai_link_component pip_dac_platform = {
+	.name = "bcm2708-i2s.0"
+};
+
 static struct snd_soc_dai_link pip_dac_card_dai[] = {
 	{
 		.name           = "TLV320AIC3100 Audio",
 		.stream_name    = "TLV320AIC3100 Hifi Audio",
-		.cpu_dai_name   = "bcm2708-i2s.0",
-		.codec_dai_name = "tlv320aic31xx-hifi",
-		.platform_name  = "bcm2708-i2s.0",
-		.codec_name     = "tlv320aic31xx-codec.1-0018",
+		.cpus = &pip_dac_cpu,
+		.num_cpus = 1,
+		.codecs = &pip_dac_codec,
+		.num_codecs = 1,
+		.platforms = &pip_dac_platform,
+		.num_platforms = 1,
+		// .dai_fmt        = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+		// 	SND_SOC_DAIFMT_CBM_CFM,
 		.dai_fmt        = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
-							SND_SOC_DAIFMT_CBS_CFS,
+		SND_SOC_DAIFMT_CBS_CFS,
 		.ops            = &pip_dac_card_ops,
 		.init           = pip_dac_card_init,
 	},
@@ -210,10 +227,10 @@ static int pip_dac_card_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	dai->cpu_dai_name = NULL;
-	dai->cpu_of_node = i2s_node;
-	dai->platform_name = NULL;
-	dai->platform_of_node = i2s_node;
+	dai->cpus[0].dai_name = NULL;
+	dai->cpus[0].of_node = i2s_node;
+	dai->platforms[0].name = NULL;
+	dai->platforms[0].of_node = i2s_node;
 
 	of_node_put(i2s_node);
 
@@ -221,6 +238,8 @@ static int pip_dac_card_probe(struct platform_device *pdev)
 	if (ret && ret != -EPROBE_DEFER)
 		dev_err(&pdev->dev,
 			"snd_soc_register_card() failed: %d\n", ret);
+
+	printk(KERN_INFO "pip dac registered: %d\n", ret);
 
 	return ret;
 }
@@ -253,3 +272,4 @@ MODULE_AUTHOR("Jason Frame <jwf@jasonframe.co.uk>");
 MODULE_DESCRIPTION("Pip driver for TLV320AIC31xx Audio");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:pip-dac");
+
