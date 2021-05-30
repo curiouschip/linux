@@ -18,6 +18,7 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/i2c.h>
+#include <linux/notifier.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -87,27 +88,50 @@ static const struct snd_soc_dapm_route pip_dac_audio_map[] = {
 // 	{"Line Out", NULL, "LOR"},
 // };
 
+
+static int headphone_status_changed(struct notifier_block *nb, unsigned long action, void *data) {
+	printk(KERN_INFO "headphone status changed: %ld\n", action);
+	return 0;
+}
+
 /*
  * I think this function is used to do any one-time codec-specific config
  */
 static int pip_dac_card_init(struct snd_soc_pcm_runtime *rtd)
 {
+	int ret = 0;
+
 	// /* TODO: init of the codec specific dapm data, ignore suspend/resume */
 	struct snd_soc_component *component = rtd->codec_dai->component;
 
 	// Set M-terminal with CM input, feed forward resistance 20k
 	snd_soc_component_update_bits(component, AIC31XX_MICPGAMI, 0x03 << 6, 0x02 << 6);
 	
-	// snd_soc_component_update_bits(component, AIC32X4_MICBIAS, 0x78,
-	// 			      AIC32X4_MICBIAS_LDOIN |
-	// 			      AIC32X4_MICBIAS_2075V);
-	// snd_soc_component_update_bits(component, AIC32X4_PWRCFG, 0x08,
-	// 			      AIC32X4_AVDDWEAKDISABLE);
-	// snd_soc_component_update_bits(component, AIC32X4_LDOCTL, 0x01,
-	// 			      AIC32X4_LDOCTLEN);
+	static struct snd_soc_jack headphone_jack;
+	ret = snd_soc_card_jack_new(rtd->card, "pip_headphones", SND_JACK_HEADSET, &headphone_jack, NULL, 0);
+	if (ret) {
+		printk(KERN_INFO "failed to create jack: %d\n", ret);
+		return ret;
+	}
+
+	static struct notifier_block nb;
+	nb.notifier_call = headphone_status_changed;
+	nb.priority = 0;
+	snd_soc_jack_notifier_register(&headphone_jack, &nb);
 
 	return 0;
 }
+
+// 	// snd_soc_component_update_bits(component, AIC32X4_MICBIAS, 0x78,
+// 	// 			      AIC32X4_MICBIAS_LDOIN |
+// 	// 			      AIC32X4_MICBIAS_2075V);
+// 	// snd_soc_component_update_bits(component, AIC32X4_PWRCFG, 0x08,
+// 	// 			      AIC32X4_AVDDWEAKDISABLE);
+// 	// snd_soc_component_update_bits(component, AIC32X4_LDOCTL, 0x01,
+// 	// 			      AIC32X4_LDOCTLEN);
+
+// 	return 0;
+// }
 
 /*
  * I have no idea what this function is for.
