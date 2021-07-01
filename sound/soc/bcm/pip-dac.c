@@ -32,9 +32,9 @@
  * These are the actual connectors on the board
  */
 static const struct snd_soc_dapm_widget pip_dac_dapm_widgets[] = {
-	SND_SOC_DAPM_HP("Headphone Jack", NULL),
-	SND_SOC_DAPM_SPK("Speaker", NULL),
-	SND_SOC_DAPM_MIC("Mic", NULL),
+	SND_SOC_DAPM_HP("Pip Headphone Jack", NULL),
+	SND_SOC_DAPM_SPK("Pip Builtin Speaker", NULL),
+	SND_SOC_DAPM_MIC("Pip Builtin Mic", NULL),
 };
 
 /*
@@ -43,14 +43,26 @@ static const struct snd_soc_dapm_widget pip_dac_dapm_widgets[] = {
  */
 static const struct snd_soc_dapm_route pip_dac_audio_map[] = {
 	/* Outputs */
-	{"Headphone Jack", NULL, "HPL"},
-	{"Headphone Jack", NULL, "HPR"},
-	{"Speaker", NULL, "SPK"},
+	{"Pip Headphone Jack", NULL, "HPL"},
+	{"Pip Headphone Jack", NULL, "HPR"},
+	{"Pip Builtin Speaker", NULL, "SPK"},
 
 	/* Inputs */
-	{"MIC1RP", NULL, "Mic"},
+	{"MIC1RP", NULL, "Pip Builtin Mic"},
 	{"MIC1RP", NULL, "MICBIAS"},
-	{"Mic", NULL, "MICBIAS"},
+	{"Pip Builtin Mic", NULL, "MICBIAS"},
+};
+
+static struct snd_soc_jack_pin headset_pins[] = {
+	{
+		.pin = "Pip Headphone Jack",
+		.mask = SND_JACK_HEADPHONE,
+	},
+	{
+		.pin = "Pip Builtin Speaker",
+		.mask = SND_JACK_HEADPHONE,
+		.invert = 1,
+	},
 };
 
 // /* Setup DAPM widgets and paths */
@@ -89,10 +101,12 @@ static const struct snd_soc_dapm_route pip_dac_audio_map[] = {
 // };
 
 
-static int headphone_status_changed(struct notifier_block *nb, unsigned long action, void *data) {
+static int headset_status_changed(struct notifier_block *nb, unsigned long action, void *data) {
 	printk(KERN_INFO "headphone status changed: %ld\n", action);
 	return 0;
 }
+
+
 
 /*
  * I think this function is used to do any one-time codec-specific config
@@ -100,24 +114,55 @@ static int headphone_status_changed(struct notifier_block *nb, unsigned long act
 static int pip_dac_card_init(struct snd_soc_pcm_runtime *rtd)
 {
 	int ret = 0;
+	struct snd_soc_component *component;
+	static struct snd_soc_jack headset_jack;
+	static struct notifier_block nb;
+
+	printk(KERN_INFO "enter init\n");
 
 	// /* TODO: init of the codec specific dapm data, ignore suspend/resume */
-	struct snd_soc_component *component = rtd->codec_dai->component;
-
-	// Set M-terminal with CM input, feed forward resistance 20k
-	snd_soc_component_update_bits(component, AIC31XX_MICPGAMI, 0x03 << 6, 0x02 << 6);
+	component = rtd->codec_dai->component;
 	
-	static struct snd_soc_jack headphone_jack;
-	ret = snd_soc_card_jack_new(rtd->card, "pip_headphones", SND_JACK_HEADSET, &headphone_jack, NULL, 0);
+    //ret = snd_soc_component_update_bits(component, AIC31XX_HSDETECT, 0x07 << 2, 5 << 2);
+	//printk(KERN_INFO "update glitch detection result: %d\n", ret);
+	
+	// Set M-terminal with CM input, feed forward resistance 21k
+	//ret = snd_soc_component_update_bits(component, AIC31XX_MICPGAMI, 0x03 << 6, 0x02 << 6);
+	//printk(KERN_INFO "update mic result: %d\n", ret);
+	
+	ret = snd_soc_card_jack_new(rtd->card, "Headset Detect", SND_JACK_HEADSET, &headset_jack, NULL, 0);
 	if (ret) {
 		printk(KERN_INFO "failed to create jack: %d\n", ret);
 		return ret;
 	}
 
-	static struct notifier_block nb;
-	nb.notifier_call = headphone_status_changed;
-	nb.priority = 0;
-	snd_soc_jack_notifier_register(&headphone_jack, &nb);
+	ret = snd_soc_jack_add_pins(&headset_jack, ARRAY_SIZE(headset_pins), headset_pins);
+	if (ret) {
+		printk(KERN_INFO "failed to add jack pins: %d\n", ret);
+		return ret;
+	}
+
+	printk(KERN_INFO "adding notifier\n");
+	nb.notifier_call = headset_status_changed;
+	nb.priority = 1;
+	snd_soc_jack_notifier_register(&headset_jack, &nb);
+
+	printk(KERN_INFO "setting jack\n");
+
+	ret = snd_soc_component_set_jack(component, &headset_jack, NULL);	
+	if (ret) {
+		printk(KERN_INFO "failed to attach jack to codec: %d\n", ret);
+		return ret;
+	}
+
+	// Set glitch detection to max
+	// Note - this must be done *after* setting the jack because jack connection handler
+	// in the codec driver will overwrite these bits with zeroes.
+    //ret = snd_soc_component_write(component, AIC31XX_HSDETECT, 0x07 << 2, 5 << 2);
+    //ret = snd_soc_component_write(component, AIC31XX_HSDETECT, 5 << 2);
+	//printk(KERN_INFO "update glitch detection result: %d\n", ret);
+
+	printk(KERN_INFO "init done!\n");
 
 	return 0;
 }
@@ -257,6 +302,8 @@ static int pip_dac_card_probe(struct platform_device *pdev)
 	dai->platforms[0].of_node = i2s_node;
 
 	of_node_put(i2s_node);
+
+	printk(KERN_INFO "registering card!\n");
 
 	ret = snd_soc_register_card(card);
 	if (ret && ret != -EPROBE_DEFER)
