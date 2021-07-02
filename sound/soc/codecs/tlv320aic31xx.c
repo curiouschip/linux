@@ -1315,13 +1315,24 @@ static int aic31xx_set_bias_level(struct snd_soc_component *component,
 static int aic31xx_set_jack(struct snd_soc_component *component,
 			    struct snd_soc_jack *jack, void *data)
 {
+	int ret;
+	unsigned int new_val;
 	struct aic31xx_priv *aic31xx = snd_soc_component_get_drvdata(component);
+
+	dev_info(aic31xx->dev, "Setting the jack %p\n", jack);
 
 	aic31xx->jack = jack;
 
+	new_val = jack ? AIC31XX_HSD_ENABLE : 0;
+	dev_info(aic31xx->dev, "Setting HSDETECT to: 0x%02X\n", new_val);
+
 	/* Enable/Disable jack detection */
-	regmap_write(aic31xx->regmap, AIC31XX_HSDETECT,
-		     jack ? AIC31XX_HSD_ENABLE : 0);
+	ret = regmap_write(aic31xx->regmap, AIC31XX_HSDETECT, new_val);
+	dev_info(aic31xx->dev, "Set regmap HSDETECT result: %d\n", ret);
+
+	new_val = 0;
+	ret = regmap_read(aic31xx->regmap, AIC31XX_HSDETECT, &new_val);
+	dev_info(aic31xx->dev, "HSDETECT read status=%d value=0x%02X\n", ret, new_val);
 
 	return 0;
 }
