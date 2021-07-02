@@ -1,5 +1,5 @@
 /*
- * Driver Pip DAC
+ * ASoC Machine Driver for Pip DAC
  * Author:
  *	Jason Frame <jwf@jasonframe.co.uk>
  *	Copyright 2020
@@ -37,10 +37,6 @@ static const struct snd_soc_dapm_widget pip_dac_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Pip Builtin Mic", NULL),
 };
 
-/*
- * Map board connectors to codec widgets
- * NB - format is { SINK, CONTROL, SOURCE }
- */
 static const struct snd_soc_dapm_route pip_dac_audio_map[] = {
 	/* Outputs */
 	{"Pip Headphone Jack", NULL, "HPL"},
@@ -48,9 +44,8 @@ static const struct snd_soc_dapm_route pip_dac_audio_map[] = {
 	{"Pip Builtin Speaker", NULL, "SPK"},
 
 	/* Inputs */
-	{"MIC1RP", NULL, "Pip Builtin Mic"},
-	{"MIC1RP", NULL, "MICBIAS"},
-	{"Pip Builtin Mic", NULL, "MICBIAS"},
+	{"MIC1LP", NULL, "Pip Builtin Mic"},
+	{"MIC1LM", NULL, "Pip Builtin Mic"}
 };
 
 static struct snd_soc_jack_pin headset_pins[] = {
@@ -65,48 +60,10 @@ static struct snd_soc_jack_pin headset_pins[] = {
 	},
 };
 
-// /* Setup DAPM widgets and paths */
-// static const struct snd_soc_dapm_widget pip_dac_dapm_widgets[] = {
-// 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
-// 	SND_SOC_DAPM_LINE("Line Out", NULL),
-// 	SND_SOC_DAPM_LINE("Line In", NULL),
-// 	SND_SOC_DAPM_INPUT("CM_L"),
-// 	SND_SOC_DAPM_INPUT("CM_R"),
-// };
-
-// static const struct snd_soc_dapm_route pip_dac_audio_map[] = {
-// 	/* Line Inputs are connected to
-// 	 * (IN1_L | IN1_R)
-// 	 * (IN2_L | IN2_R)
-// 	 * (IN3_L | IN3_R)
-// 	 */
-// 	{"IN1_L", NULL, "Line In"},
-// 	{"IN1_R", NULL, "Line In"},
-// 	{"IN2_L", NULL, "Line In"},
-// 	{"IN2_R", NULL, "Line In"},
-// 	{"IN3_L", NULL, "Line In"},
-// 	{"IN3_R", NULL, "Line In"},
-
-// 	/* Mic is connected to IN2_L and IN2_R */
-// 	{"Left ADC", NULL, "Mic Bias"},
-// 	{"Right ADC", NULL, "Mic Bias"},
-
-// 	/* Headphone connected to HPL, HPR */
-// 	{"Headphone Jack", NULL, "HPL"},
-// 	{"Headphone Jack", NULL, "HPR"},
-
-// 	/* Speakers connected to LOL and LOR */
-// 	{"Line Out", NULL, "LOL"},
-// 	{"Line Out", NULL, "LOR"},
-// };
-
-
 static int headset_status_changed(struct notifier_block *nb, unsigned long action, void *data) {
 	printk(KERN_INFO "headphone status changed: %ld\n", action);
 	return 0;
 }
-
-
 
 /*
  * I think this function is used to do any one-time codec-specific config
@@ -122,13 +79,6 @@ static int pip_dac_card_init(struct snd_soc_pcm_runtime *rtd)
 
 	// /* TODO: init of the codec specific dapm data, ignore suspend/resume */
 	component = rtd->codec_dai->component;
-	
-    //ret = snd_soc_component_update_bits(component, AIC31XX_HSDETECT, 0x07 << 2, 5 << 2);
-	//printk(KERN_INFO "update glitch detection result: %d\n", ret);
-	
-	// Set M-terminal with CM input, feed forward resistance 21k
-	//ret = snd_soc_component_update_bits(component, AIC31XX_MICPGAMI, 0x03 << 6, 0x02 << 6);
-	//printk(KERN_INFO "update mic result: %d\n", ret);
 	
 	ret = snd_soc_card_jack_new(rtd->card, "Headset Detect", SND_JACK_HEADSET, &headset_jack, NULL, 0);
 	if (ret) {
@@ -158,9 +108,10 @@ static int pip_dac_card_init(struct snd_soc_pcm_runtime *rtd)
 	// Set glitch detection to max
 	// Note - this must be done *after* setting the jack because jack connection handler
 	// in the codec driver will overwrite these bits with zeroes.
-    //ret = snd_soc_component_write(component, AIC31XX_HSDETECT, 0x07 << 2, 5 << 2);
-    //ret = snd_soc_component_write(component, AIC31XX_HSDETECT, 5 << 2);
-	//printk(KERN_INFO "update glitch detection result: %d\n", ret);
+    ret = snd_soc_component_update_bits(component, AIC31XX_HSDETECT, 0x07 << 2, 5 << 2);
+    if (ret) {
+    	printk(KERN_INFO "failed to set glitch detection bits: %d\n", ret);
+    }
 
 	printk(KERN_INFO "init done!\n");
 
