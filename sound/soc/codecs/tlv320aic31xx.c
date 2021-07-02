@@ -1330,10 +1330,6 @@ static int aic31xx_set_jack(struct snd_soc_component *component,
 	ret = regmap_write(aic31xx->regmap, AIC31XX_HSDETECT, new_val);
 	dev_info(aic31xx->dev, "Set regmap HSDETECT result: %d\n", ret);
 
-	new_val = 0;
-	ret = regmap_read(aic31xx->regmap, AIC31XX_HSDETECT, &new_val);
-	dev_info(aic31xx->dev, "HSDETECT read status=%d value=0x%02X\n", ret, new_val);
-
 	return 0;
 }
 
