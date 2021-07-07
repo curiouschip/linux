@@ -60,57 +60,57 @@ static struct snd_soc_jack_pin headset_pins[] = {
 	},
 };
 
-static int headset_status_changed(struct notifier_block *nb, unsigned long action, void *data) {
-	printk(KERN_INFO "headphone status changed: %ld\n", action);
-	return 0;
-}
-
-/*
- * I think this function is used to do any one-time codec-specific config
- */
 static int pip_dac_card_init(struct snd_soc_pcm_runtime *rtd)
 {
-	int ret = 0;
-	struct snd_soc_component *component;
+	int ret;
+	struct snd_soc_card *card = rtd->card;
+	struct snd_soc_component *component = rtd->codec_dai->component;
 	static struct snd_soc_jack headset_jack;
-	static struct notifier_block nb;
 
-	printk(KERN_INFO "enter init\n");
+	dev_info(card->dev, "init!");
 
-	// /* TODO: init of the codec specific dapm data, ignore suspend/resume */
-	component = rtd->codec_dai->component;
+	dev_info(card->dev, "force enable pin");
+	ret = snd_soc_dapm_force_enable_pin(&card->dapm, "MICBIAS");
+	if (ret) {
+		dev_err(card->dev, "failed to force enable MICBIAS: %d\n", ret);
+		return ret;
+	}
+
+	dev_info(card->dev, "sync");
+	ret = snd_soc_dapm_sync(&card->dapm);
+	if (ret) {
+		dev_err(card->dev, "DAPM sync failed: %d\n", ret);
+		return ret;
+	}
 	
+	dev_info(card->dev, "create jack");
 	ret = snd_soc_card_jack_new(rtd->card, "Headset Detect", SND_JACK_HEADSET, &headset_jack, NULL, 0);
 	if (ret) {
-		printk(KERN_INFO "failed to create jack: %d\n", ret);
+		dev_err(card->dev, "failed to create jack: %d\n", ret);
 		return ret;
 	}
 
+	dev_info(card->dev, "attach pins to jack");
 	ret = snd_soc_jack_add_pins(&headset_jack, ARRAY_SIZE(headset_pins), headset_pins);
 	if (ret) {
-		printk(KERN_INFO "failed to add jack pins: %d\n", ret);
+		dev_err(card->dev, "failed to add jack pins: %d\n", ret);
 		return ret;
 	}
 
-	printk(KERN_INFO "adding notifier\n");
-	nb.notifier_call = headset_status_changed;
-	nb.priority = 1;
-	snd_soc_jack_notifier_register(&headset_jack, &nb);
-
-	printk(KERN_INFO "setting jack\n");
-
+	dev_info(card->dev, "set jack component");
 	ret = snd_soc_component_set_jack(component, &headset_jack, NULL);	
 	if (ret) {
-		printk(KERN_INFO "failed to attach jack to codec: %d\n", ret);
+		dev_err(card->dev, "failed to attach jack to codec: %d\n", ret);
 		return ret;
 	}
 
 	// Set glitch detection to max
 	// Note - this must be done *after* setting the jack because jack connection handler
 	// in the codec driver will overwrite these bits with zeroes.
+	dev_info(card->dev, "glitch detection");
     ret = snd_soc_component_update_bits(component, AIC31XX_HSDETECT, 0x07 << 2, 5 << 2);
     if (ret) {
-    	printk(KERN_INFO "failed to set glitch detection bits: %d\n", ret);
+    	dev_err(card->dev, "failed to set glitch detection bits: %d\n", ret);
     }
 
 	printk(KERN_INFO "init done!\n");
@@ -118,21 +118,6 @@ static int pip_dac_card_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-// 	// snd_soc_component_update_bits(component, AIC32X4_MICBIAS, 0x78,
-// 	// 			      AIC32X4_MICBIAS_LDOIN |
-// 	// 			      AIC32X4_MICBIAS_2075V);
-// 	// snd_soc_component_update_bits(component, AIC32X4_PWRCFG, 0x08,
-// 	// 			      AIC32X4_AVDDWEAKDISABLE);
-// 	// snd_soc_component_update_bits(component, AIC32X4_LDOCTL, 0x01,
-// 	// 			      AIC32X4_LDOCTLEN);
-
-// 	return 0;
-// }
-
-/*
- * I have no idea what this function is for.
- * It's registered as part of the ops struct field.
- */
 static int pip_dac_card_startup(struct snd_pcm_substream *substream)
 {
 	//struct snd_pcm_runtime *runtime = substream->runtime;
@@ -254,14 +239,10 @@ static int pip_dac_card_probe(struct platform_device *pdev)
 
 	of_node_put(i2s_node);
 
-	printk(KERN_INFO "registering card!\n");
-
 	ret = snd_soc_register_card(card);
 	if (ret && ret != -EPROBE_DEFER)
 		dev_err(&pdev->dev,
 			"snd_soc_register_card() failed: %d\n", ret);
-
-	printk(KERN_INFO "pip dac registered: %d\n", ret);
 
 	return ret;
 }
