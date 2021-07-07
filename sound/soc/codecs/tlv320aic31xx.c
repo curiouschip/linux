@@ -1237,6 +1237,8 @@ static int aic31xx_power_on(struct snd_soc_component *component)
 	struct aic31xx_priv *aic31xx = snd_soc_component_get_drvdata(component);
 	int ret;
 
+	dev_info(component->dev, "power ON");
+
 	ret = regulator_bulk_enable(ARRAY_SIZE(aic31xx->supplies),
 				    aic31xx->supplies);
 	if (ret)
@@ -1273,6 +1275,8 @@ static void aic31xx_power_off(struct snd_soc_component *component)
 {
 	struct aic31xx_priv *aic31xx = snd_soc_component_get_drvdata(component);
 
+	dev_info(component->dev, "power OFF");
+
 	regcache_cache_only(aic31xx->regmap, true);
 	regulator_bulk_disable(ARRAY_SIZE(aic31xx->supplies),
 			       aic31xx->supplies);
@@ -1281,7 +1285,7 @@ static void aic31xx_power_off(struct snd_soc_component *component)
 static int aic31xx_set_bias_level(struct snd_soc_component *component,
 				  enum snd_soc_bias_level level)
 {
-	dev_dbg(component->dev, "## %s: %d -> %d\n", __func__,
+	dev_info(component->dev, "## %s: %d -> %d\n", __func__,
 		snd_soc_component_get_bias_level(component), level);
 
 	switch (level) {
