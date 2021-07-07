@@ -60,6 +60,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	hd44780-lcd.dtbo \
 	hdmi-backlight-hwhack-gpio.dtbo \
 	hifiberry-amp.dtbo \
+	hifiberry-amp100.dtbo \
 	hifiberry-dac.dtbo \
 	hifiberry-dacplus.dtbo \
 	hifiberry-dacplusadc.dtbo \
@@ -108,6 +109,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	mcp23s17.dtbo \
 	mcp2515-can0.dtbo \
 	mcp2515-can1.dtbo \
+	mcp251xfd.dtbo \
 	mcp3008.dtbo \
 	mcp3202.dtbo \
 	mcp342x.dtbo \
@@ -159,6 +161,8 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	sc16is752-spi1.dtbo \
 	sdhost.dtbo \
 	sdio.dtbo \
+	seeed-can-fd-hat-v1.dtbo \
+	seeed-can-fd-hat-v2.dtbo \
 	sh1106-spi.dtbo \
 	smi.dtbo \
 	smi-dev.dtbo \
@@ -208,7 +212,8 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	w1-gpio.dtbo \
 	w1-gpio-pullup.dtbo \
 	w5500.dtbo \
-	wittypi.dtbo
+	wittypi.dtbo \
+	wm8960-soundcard.dtbo
 
 targets += dtbs dtbs_install
 targets += $(dtbo-y)
