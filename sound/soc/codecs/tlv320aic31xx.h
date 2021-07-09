@@ -39,6 +39,10 @@ struct aic31xx_pdata {
 	int micbias_vg;
 };
 
+struct aic31xx_jack_config {
+	unsigned int headset_debounce;
+};
+
 #define AIC31XX_REG(page, reg)	((page * 128) + reg)
 
 #define AIC31XX_PAGECTL		AIC31XX_REG(0, 0) /* Page Control Register */
@@ -228,6 +232,14 @@ struct aic31xx_pdata {
 #define AIC31XX_HSD_NONE		0x00
 #define AIC31XX_HSD_HP			0x01
 #define AIC31XX_HSD_HS			0x03
+#define AIC31XX_HSD_DEBOUNCE_SHIFT	(2)
+#define AIC31XX_HSD_DEBOUNCE_16_MS	0x00
+#define AIC31XX_HSD_DEBOUNCE_32_MS	0x01
+#define AIC31XX_HSD_DEBOUNCE_64_MS	0x02
+#define AIC31XX_HSD_DEBOUNCE_128_MS	0x03
+#define AIC31XX_HSD_DEBOUNCE_256_MS	0x04
+#define AIC31XX_HSD_DEBOUNCE_512_MS	0x05
+#define AIC31XX_HSD_DEBOUNCE_MAX	0x06
 
 /* AIC31XX_HPDRIVER */
 #define AIC31XX_HPD_OCMV_MASK		GENMASK(4, 3)
