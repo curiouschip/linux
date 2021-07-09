@@ -35,6 +35,9 @@
 
 #include "tlv320aic31xx.h"
 
+static int aic31xx_set_jack(struct snd_soc_component *component,
+			    struct snd_soc_jack *jack, void *data);
+
 static const struct reg_default aic31xx_reg_defaults[] = {
 	{ AIC31XX_CLKMUX, 0x00 },
 	{ AIC31XX_PLLPR, 0x11 },
@@ -166,6 +169,7 @@ struct aic31xx_priv {
 	struct regulator_bulk_data supplies[AIC31XX_NUM_SUPPLIES];
 	struct aic31xx_disable_nb disable_nb[AIC31XX_NUM_SUPPLIES];
 	struct snd_soc_jack *jack;
+	struct aic31xx_jack_config jack_config;
 	unsigned int sysclk;
 	u8 p_div;
 	int rate_div_line;
@@ -1217,6 +1221,8 @@ static int aic31xx_power_on(struct snd_soc_component *component)
 		return ret;
 	}
 
+	aic31xx_set_jack(component, aic31xx->jack, &aic31xx->jack_config);
+
 	return 0;
 }
 
@@ -1267,12 +1273,26 @@ static int aic31xx_set_jack(struct snd_soc_component *component,
 			    struct snd_soc_jack *jack, void *data)
 {
 	struct aic31xx_priv *aic31xx = snd_soc_component_get_drvdata(component);
+	struct aic31xx_jack_config *cfg = (struct aic31xx_jack_config*)data;
+	unsigned int reg = 0;
 
 	aic31xx->jack = jack;
+	if (cfg) {
+		if (cfg->headset_debounce >= AIC31XX_HSD_DEBOUNCE_MAX) {
+			return -EINVAL;
+		}
+		aic31xx->jack_config = *cfg;
+	} else {
+		memset(&aic31xx->jack_config, 0, sizeof(aic31xx->jack_config));
+	}
+
+	if (jack) {
+		reg = AIC31XX_HSD_ENABLE
+			| (aic31xx->jack_config.headset_debounce << AIC31XX_HSD_DEBOUNCE_SHIFT);
+	}
 
 	/* Enable/Disable jack detection */
-	regmap_write(aic31xx->regmap, AIC31XX_HSDETECT,
-		     jack ? AIC31XX_HSD_ENABLE : 0);
+	regmap_write(aic31xx->regmap, AIC31XX_HSDETECT, reg);
 
 	return 0;
 }
