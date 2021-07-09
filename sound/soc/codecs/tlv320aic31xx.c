@@ -1315,7 +1315,6 @@ static int aic31xx_set_jack(struct snd_soc_component *component,
 	struct aic31xx_jack_config *cfg = (struct aic31xx_jack_config*)data;
 	unsigned int reg = 0;
 
-	aic31xx->jack = jack;
 	if (cfg) {
 		if (cfg->headset_debounce >= AIC31XX_HSD_DEBOUNCE_MAX) {
 			return -EINVAL;
@@ -1325,6 +1324,7 @@ static int aic31xx_set_jack(struct snd_soc_component *component,
 		memset(&aic31xx->jack_config, 0, sizeof(aic31xx->jack_config));
 	}
 
+	aic31xx->jack = jack;
 	if (jack) {
 		reg = AIC31XX_HSD_ENABLE
 			| (aic31xx->jack_config.headset_debounce << AIC31XX_HSD_DEBOUNCE_SHIFT);
