@@ -66,54 +66,27 @@ static int pip_dac_card_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_component *component = rtd->codec_dai->component;
 	static struct snd_soc_jack headset_jack;
-
-	dev_info(card->dev, "init!");
-
-	dev_info(card->dev, "force enable pin");
-	ret = snd_soc_dapm_force_enable_pin(&card->dapm, "MICBIAS");
-	if (ret) {
-		dev_err(card->dev, "failed to force enable MICBIAS: %d\n", ret);
-		return ret;
-	}
-
-	dev_info(card->dev, "sync");
-	ret = snd_soc_dapm_sync(&card->dapm);
-	if (ret) {
-		dev_err(card->dev, "DAPM sync failed: %d\n", ret);
-		return ret;
-	}
+	struct aic31xx_jack_config headset_jack_config = {
+		.headset_debounce = AIC31XX_HSD_DEBOUNCE_512_MS
+	};
 	
-	dev_info(card->dev, "create jack");
 	ret = snd_soc_card_jack_new(rtd->card, "Headset Detect", SND_JACK_HEADSET, &headset_jack, NULL, 0);
 	if (ret) {
 		dev_err(card->dev, "failed to create jack: %d\n", ret);
 		return ret;
 	}
 
-	dev_info(card->dev, "attach pins to jack");
 	ret = snd_soc_jack_add_pins(&headset_jack, ARRAY_SIZE(headset_pins), headset_pins);
 	if (ret) {
 		dev_err(card->dev, "failed to add jack pins: %d\n", ret);
 		return ret;
 	}
 
-	dev_info(card->dev, "set jack component");
-	ret = snd_soc_component_set_jack(component, &headset_jack, NULL);	
+	ret = snd_soc_component_set_jack(component, &headset_jack, &headset_jack_config);	
 	if (ret) {
 		dev_err(card->dev, "failed to attach jack to codec: %d\n", ret);
 		return ret;
 	}
-
-	// Set glitch detection to max
-	// Note - this must be done *after* setting the jack because jack connection handler
-	// in the codec driver will overwrite these bits with zeroes.
-	dev_info(card->dev, "glitch detection");
-    ret = snd_soc_component_update_bits(component, AIC31XX_HSDETECT, 0x07 << 2, 5 << 2);
-    if (ret) {
-    	dev_err(card->dev, "failed to set glitch detection bits: %d\n", ret);
-    }
-
-	printk(KERN_INFO "init done!\n");
 
 	return 0;
 }
