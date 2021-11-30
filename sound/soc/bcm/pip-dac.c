@@ -64,7 +64,7 @@ static int pip_dac_card_init(struct snd_soc_pcm_runtime *rtd)
 {
 	int ret;
 	struct snd_soc_card *card = rtd->card;
-	struct snd_soc_component *component = rtd->codec_dai->component;
+	struct snd_soc_component *component = asoc_rtd_to_codec(rtd, 0)->component;
 	static struct snd_soc_jack headset_jack;
 	struct aic31xx_jack_config headset_jack_config = {
 		.headset_debounce = AIC31XX_HSD_DEBOUNCE_512_MS
@@ -121,7 +121,7 @@ static int pip_dac_card_hw_params(
 {
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
 
 	/* Set the codec to use a 12MHz clock! */
 	ret = snd_soc_dai_set_sysclk(codec_dai, AIC31XX_PLL_CLKIN_BCKL,
